@@ -467,8 +467,14 @@ def _ingest_and_generate_repo(repo: Any, idx: int, total: int, ctx: _WorkspaceCt
         )
 
     # Persist to repo-local DB
-    run_async(persist_result(result, repo.path, timings=callback.table))
+    persist_callback = callback.rebind(RichProgressCallback(None, console))
+    persist_callback.on_phase_start("persist", None)
+    try:
+        run_async(persist_result(result, repo.path, persist_callback, callback.table))
+    finally:
+        persist_callback.on_phase_done("persist")
 
+  
     # Write state.json so `repowise update` knows the base commit
     head = get_head_commit(repo.path)
     pages_count = len(result.generated_pages or [])
