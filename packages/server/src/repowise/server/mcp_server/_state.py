@@ -18,6 +18,9 @@ _vector_store: Any = None
 _decision_store: Any = None
 _fts: Any = None
 _repo_path: str | None = None
+# When set, the server skips workspace auto-detection even if the path is
+# inside a workspace root. This backs the CLI's `--no-workspace` escape hatch.
+_force_single_repo: bool = False
 # Set to an asyncio.Event by _lifespan; signals that vector stores are loaded.
 # tool_search awaits this before searching to avoid racing a background load.
 _vector_store_ready: asyncio.Event | None = None
@@ -54,3 +57,12 @@ _test_impact_lock: tuple[Any, asyncio.Lock] | None = None
 # (issue #306). Shape: {"active": str, "requested": str | None,
 # "degraded": bool, "reason": str (only when degraded)}.
 _embedder_status: dict[str, Any] | None = None
+
+# Release currency. The stdio server is the longest-lived process the product
+# runs and was the one path that never checked PyPI, so a client could sit on
+# an old release for weeks with no signal. ``_release_check`` is the latest
+# ``ReleaseCheck`` from the lifespan's poller (``None`` until the first pass);
+# ``_release_announced`` is the newest version ``_meta`` has already named, so
+# each newer release is surfaced once per process rather than on every call.
+_release_check: Any = None
+_release_announced: str | None = None

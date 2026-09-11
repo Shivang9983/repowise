@@ -318,10 +318,10 @@ export interface ChatMessageResponse {
 
 /** Navigation metadata supplied by a product chat surface. */
 export interface ChatPageContext {
-  kind: "repository" | "overview" | "documentation" | "architecture" | "graph" | "health" | "refactoring" | "file" | "symbol" | "module" | "dependency" | "commit" | "contributor" | "decision" | "risk" | "security" | "usage" | "settings" | "chat";
+  kind: "repository" | "overview" | "documentation" | "architecture" | "graph" | "health" | "refactoring" | "file" | "symbol" | "module" | "dependency" | "commit" | "contributor" | "decision" | "risk" | "dead-code" | "blast-radius" | "security" | "usage" | "settings" | "chat";
   label: string;
   target?: string | null;
-  target_kind?: "path" | "symbol" | "module" | "commit" | "person" | "decision" | "documentation" | null;
+  target_kind?: "path" | "symbol" | "module" | "dependency" | "commit" | "person" | "decision" | "documentation" | null;
 }
 
 export interface ChatRequest {
@@ -1543,15 +1543,21 @@ export interface HealthTrendAlert {
   baseline?: number | null;
   delta: number;
   message: string;
+  driver?: string | null;
+  structure_delta?: number | null;
+  history_delta?: number | null;
 }
 
 /** One snapshot in the repo-level history, newest first. */
 export interface HealthTrendKpiRow {
   taken_at?: string | null;
-  hotspot_health: number;
+  hotspot_health?: number | null;
   average_health: number;
   worst_performer_path?: string | null;
   worst_performer_score?: number | null;
+  structure_average?: number | null;
+  history_average?: number | null;
+  maintainability_average?: number | null;
 }
 
 export interface HealthTrendResponse {
@@ -1561,15 +1567,18 @@ export interface HealthTrendResponse {
   file_deltas?: HealthFileDelta[];
   file_deltas_total?: number;
   snapshot_count?: number;
+  scope?: string;
 }
 
 export interface HealthTrendSummary {
-  current_hotspot_health: number;
+  current_hotspot_health?: number | null;
   current_average_health: number;
   previous_hotspot_health?: number | null;
   previous_average_health?: number | null;
   hotspot_delta?: number | null;
   average_delta?: number | null;
+  current_structure_deduction?: number | null;
+  current_history_deduction?: number | null;
 }
 
 /** One file in the triage queue, ranked by impact over effort. */
@@ -1588,6 +1597,7 @@ export interface HealthWorkItem {
   primary_finding_id: string;
   total_impact: number;
   finding_count: number;
+  open_finding_count?: number;
   biomarkers?: string[];
   effort_bucket: string;
   impact_per_effort: number;
@@ -1596,6 +1606,9 @@ export interface HealthWorkItem {
 export interface HealthWorkQueueResponse {
   targets?: HealthWorkItem[];
   total?: number;
+  finding_total?: number;
+  offset?: number;
+  limit?: number;
 }
 
 export interface HotFilesGraphResponse {
