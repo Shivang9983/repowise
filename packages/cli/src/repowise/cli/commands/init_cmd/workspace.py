@@ -482,13 +482,29 @@ def _ingest_and_generate_repo(repo: Any, idx: int, total: int, ctx: _WorkspaceCt
         )
 
     # Persist to repo-local DB
-    persist_callback = callback.rebind(RichProgressCallback(None, console))
-    persist_callback.on_phase_start("persist", None)
-    try:
-        run_async(persist_result(result, repo.path, persist_callback, callback.table))
-    finally:
-        persist_callback.on_phase_done("persist")
+    persist_warnings: list[str] = []
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        TimeElapsedColumn(),
+        console=console,
+        transient=True,
+    ) as persist_bar:
+        persist_callback = callback.rebind(RichProgressCallback(persist_bar, console))
+        persist_callback.on_phase_start("persist", None)
+        try:
+            run_async(persist_result(result, repo.path, persist_callback, callback.table))
+        finally:
+            persist_callback.on_phase_done("persist")
+            persist_warnings.extend(persist_callback.warnings)
 
+    return _RepoOutcome(
+        file_count=result.file_count,
+        symbol_count=result.symbol_count,
+        pages_generated=pages_generated,
+        docs_outcome=docs_outcome,
+        warnings=persist_warnings,
+    )
   
     # Write state.json so `repowise update` knows the base commit
     head = get_head_commit(repo.path)
