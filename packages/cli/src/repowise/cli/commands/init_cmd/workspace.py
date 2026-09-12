@@ -12,7 +12,7 @@ from __future__ import annotations
 import os
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -297,6 +297,7 @@ class _RepoOutcome:
     symbol_count: int = 0
     pages_generated: int = 0
     docs_outcome: tuple[int, str | None] = (0, None)
+    warnings: list[str] = field(default_factory=list)
 
 
 def _ingest_and_generate_repo(repo: Any, idx: int, total: int, ctx: _WorkspaceCtx) -> _RepoOutcome:
@@ -495,17 +496,13 @@ def _ingest_and_generate_repo(repo: Any, idx: int, total: int, ctx: _WorkspaceCt
         try:
             run_async(persist_result(result, repo.path, persist_callback, callback.table))
         finally:
-            persist_callback.on_phase_done("persist")
-            persist_warnings.extend(persist_callback.warnings)
-
-    return _RepoOutcome(
-        file_count=result.file_count,
-        symbol_count=result.symbol_count,
-        pages_generated=pages_generated,
-        docs_outcome=docs_outcome,
-        warnings=persist_warnings,
-    )
-  
+            try:
+                persist_callback.on_phase_done("persist")
+                persist_warnings.extend(persist_callback.warnings)
+            except RuntimeError as e:
+                if "Event loop is closed" not in str(e):
+                    raise
+                
     # Write state.json so `repowise update` knows the base commit
     head = get_head_commit(repo.path)
     pages_count = len(result.generated_pages or [])
@@ -593,6 +590,7 @@ def _ingest_and_generate_repo(repo: Any, idx: int, total: int, ctx: _WorkspaceCt
         symbol_count=result.symbol_count,
         pages_generated=pages_generated,
         docs_outcome=docs_outcome,
+        warnings=persist_warnings,
     )
 
 
