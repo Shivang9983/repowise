@@ -12,7 +12,7 @@ from __future__ import annotations
 import os
 import sys
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -297,7 +297,6 @@ class _RepoOutcome:
     symbol_count: int = 0
     pages_generated: int = 0
     docs_outcome: tuple[int, str | None] = (0, None)
-    warnings: list[str] = field(default_factory=list)
 
 
 def _ingest_and_generate_repo(repo: Any, idx: int, total: int, ctx: _WorkspaceCtx) -> _RepoOutcome:
@@ -525,6 +524,10 @@ def _ingest_and_generate_repo(repo: Any, idx: int, total: int, ctx: _WorkspaceCt
     kg = getattr(result, "knowledge_graph_result", None)
     if kg is not None:
         state["knowledge_graph"] = build_kg_state(kg)
+        
+        state.pop("degraded", None)
+    if persist_warnings:
+        state["degraded"] = persist_warnings
     # A workspace repo is fully indexed here (concept tree included), so stamp
     # the terminal store format rather than clamping below the reindex gate.
     save_state(repo.path, state, full_index=True)
@@ -590,7 +593,6 @@ def _ingest_and_generate_repo(repo: Any, idx: int, total: int, ctx: _WorkspaceCt
         symbol_count=result.symbol_count,
         pages_generated=pages_generated,
         docs_outcome=docs_outcome,
-        warnings=persist_warnings,
     )
 
 
